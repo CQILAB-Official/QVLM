@@ -1,0 +1,35 @@
+Installing collected packages: torchao, hf-xet, huggingface_hub, tokenizers, transformers, unsloth_zoo, unsloth
+  Attempting uninstall: hf-xet
+    Found existing installation: hf-xet 1.1.2
+    Uninstalling hf-xet-1.1.2:
+      Successfully uninstalled hf-xet-1.1.2
+  Attempting uninstall: huggingface_hub
+    Found existing installation: huggingface-hub 0.30.2
+    Uninstalling huggingface-hub-0.30.2:
+      Successfully uninstalled huggingface-hub-0.30.2
+  Attempting uninstall: tokenizers
+    Found existing installation: tokenizers 0.21.1
+    Uninstalling tokenizers-0.21.1:
+      Successfully uninstalled tokenizers-0.21.1
+  Attempting uninstall: transformers
+    Found existing installation: transformers 4.49.0
+    Uninstalling transformers-4.49.0:
+      Successfully uninstalled transformers-4.49.0
+  Attempting uninstall: unsloth_zoo
+    Found existing installation: unsloth_zoo 2025.3.7
+    Uninstalling unsloth_zoo-2025.3.7:
+      Successfully uninstalled unsloth_zoo-2025.3.7
+  Attempting uninstall: unsloth
+    Found existing installation: unsloth 2025.3.8
+    Uninstalling unsloth-2025.3.8:
+      Successfully uninstalled unsloth-2025.3.8
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+colpali-engine 0.3.10.dev2+ga379b38 requires transformers<4.51.0,>=4.50.0, but you have transformers 4.56.1 which is incompatible.
+olive-ai 0.7.1.1 requires numpy<2.0, but you have numpy 2.2.6 which is incompatible.
+olive-ai 0.7.1.1 requires protobuf<4.0.0, but you have protobuf 5.29.5 which is incompatible.
+lmdeploy 0.7.3 requires numpy<2.0.0, but you have numpy 2.2.6 which is incompatible.
+autoawq 0.2.8 requires transformers<=4.47.1,>=4.45.0, but you have transformers 4.56.1 which is incompatible.
+Successfully installed hf-xet-1.1.9 huggingface_hub-0.34.4 tokenizers-0.22.0 torchao-0.13.0 transformers-4.56.1 unsloth-2025.9.1 unsloth_zoo-2025.9.2
+
+
+pip install tokenizers==0.21.1 transformers==4.49.0 unsloth_zoo==2025.3.7 unsloth==2025.3.8

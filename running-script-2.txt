@@ -1,0 +1,3 @@
+# qwen3 vl 
+
+tmux new -s base-llama-2 'python -u test_inference_wigner_cot_qwen25vl_circuits_baseline2.py 2>&1 | tee -a  OUTPUT-BASELINE-2-LLAMA.txt'

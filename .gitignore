@@ -1,0 +1,53 @@
+# Ignore specific folders
+Checkpoints/
+Dataset/
+Repos/InternVL/
+Repos/bleurt/
+
+# Optional: ignore all contents inside those folders if needed
+Checkpoints/**
+Dataset/**
+Repos/InternVL/**
+Repos/bleurt/**
+
+# This part requires external tooling — Git doesn't support ignoring by file size directly.
+# Create a .gitattributes file with:
+#   * filter=limit-size
+
+# Then set this filter in your Git config:
+#   git config filter.limit-size.clean "sh -c 'if [ $(wc -c < \"$1\") -gt 10485760 ]; then exit 1; else cat; fi'"
+
+# Alternative (easier): use pre-commit hook to block >10MB files from being committed
+
+model*
+
+.env
+
+unsloth_compiled_cache
+
+log
+logs
+
+Images
+
+figures
+
+output*
+
+QuantumCircuit_VQA*
+
+backup*
+
+case_study_*
+
+llmfinetune-env.yml
+
+inference_results*
+llamafactory*
+
+ResultUpdate
+ResultGroupUpdate
+
+docker-new
+
+metrics*
