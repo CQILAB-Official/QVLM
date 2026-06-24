@@ -47,7 +47,18 @@ llamafactory*
 
 ResultUpdate
 ResultGroupUpdate
+inference-result
+inference-result/**
 
 docker-new
 
 metrics*
+qst-nn
+generate_fock_state
+inference_results
+version_notes/
+version_notes/**
+version_notes/*.txt
+dataset/
+dataset/**
+dataset/*.csv

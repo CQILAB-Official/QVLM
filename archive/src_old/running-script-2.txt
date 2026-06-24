@@ -1,0 +1,18 @@
+# qwen3 vl 
+
+tmux new -s base-llama-2 'python -u test_inference_wigner_cot_qwen25vl_circuits_baseline2.py 2>&1 | tee -a  OUTPUT-BASELINE-2-LLAMA.txt'
+
+7z a -t7z -m0=lzma2 -mx=9 -mmt=on model_cot_qwen3vl_8b_4bit_thinking_v3-7504.7z model_cot_qwen3vl_8b_4bit_thinking_v3/che
+ckpoint-7504
+
+7z a -t7z -m0=lzma2 -mx=9 -mmt=on model_cot_qwen25vl_32b_v3-4690.7z model_cot_qwen25vl_32b_v3/checkpoint-4690
+
+7z a -t7z -m0=lzma2 -mx=9 -mmt=on model_cot_qwen25vl_32b_v1-1876.7z model_cot_qwen25vl_32b_v1/checkpoint-1876
+
+7z a -t7z -m0=lzma2 -mx=9 -mmt=on model_cot_qwen3vl_32b_4bit_thinking_v1-2814.7z model_cot_qwen3vl_32b_4bit_thinking_v1/checkpoint-2814
+
+7z a -t7z -m0=lzma2 -mx=9 -mmt=on model_cot_qwen25vl_continued-7496.7z models/model_cot_qwen25vl_continued/checkpoint-7496
+
+7z a -t7z -m0=lzma2 -mx=9 -mmt=on model_cot_qwen25vl-2440.7z models/model_cot_qwen25vl/checkpoint-2440
+
+tmux new -s qwen32b-vfocused 'python -u test_inference_wigner_cot_qwen25vl_circuits.py 2>&1 | tee -a  output_test32b-vfocused.txt'
