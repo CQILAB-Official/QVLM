@@ -13,7 +13,7 @@ from unsloth import FastVisionModel
 MODEL = None
 TOKENIZER = None
 model_location = "./model_3vl_circuit_refactor_imporvedprompt_focused6"
-ckpt_location = "checkpoint-1590"
+ckpt_location = "checkpoint-378"
 model_name = "qwen3vl"
 model_version = "8b-instruct-real-circuit-focused6"
 # model_id = "unsloth/Qwen2.5-VL-7B-Instruct-unsloth-bnb-4bit"

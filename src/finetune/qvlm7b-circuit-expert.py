@@ -9,8 +9,7 @@ from unsloth import FastVisionModel
 from trl import SFTTrainer, SFTConfig
 from unsloth import is_bf16_supported
 from unsloth.trainer import UnslothVisionDataCollator
-import pandas as pd
-from sklearn.model_selection import train_test_split
+from datasets import load_dataset
 
 output_dir = './model_25vl_circuit_refactor_imporvedprompt'
 model_id = "unsloth/Qwen2.5-VL-7B-Instruct-bnb-4bit"
@@ -114,11 +113,13 @@ class FinetuneQwenVL:
         }
         
     def format_data_multiturn(self, row):
-        img_path = row["image"]
-        try:
-            img = Image.open(img_path).convert("RGB").resize((1000, 600))
-        except Exception as e:
-            raise FileNotFoundError(f"Cannot open {img_path}: {e}")
+        if isinstance(row["image"], Image.Image):
+            img = row["image"].convert("RGB").resize((1000, 600))
+        else:
+            try:
+                img = Image.open(row["image"]).convert("RGB").resize((1000, 600))
+            except Exception as e:
+                raise FileNotFoundError(f"Cannot open {row['image']}: {e}")
 
         messages   = []
         image_sent = False
@@ -234,103 +235,28 @@ class FinetuneQwenVL:
         trainer.train()
 
 
-# ------------------------------ helpers ---------------------------------
-def csv_to_ft_lists(csv_path, test_frac=0.1, seed=42):
-    df = pd.read_csv(csv_path).sample(frac=1, random_state=seed).reset_index(drop=True)
-    train_df, test_df = train_test_split(df, test_size=test_frac, random_state=seed)
-    return train_df.to_dict("records"), test_df.to_dict("records")
-
 # --------------------------- main script --------------------------------
 if __name__ == "__main__":
-    BASE_CSV = "Dataset/wigner_analysis_results_combined.csv"
-    CIR_CSV  = "case_study_circuit_patched.csv"
-    ENT_CSV  = "case_study_entanglement.csv"
+    HF_DATASET = "CQILAB/QVLM-Circuit"
+    print(f"Loading dataset from HuggingFace: {HF_DATASET}")
+    hf_dataset = load_dataset(HF_DATASET, split="train")
+    print(f"Dataset loaded: {len(hf_dataset)} samples")
 
-    BEST_PROMPT = (
-        "You are given a grayscale image representing a quantum optical state. "
-        "Your task is to determine the type of the state (e.g., cat state, Fock state, "
-        "coherent state, thermal state, random state etc.) as well as its key parameters "
-        "(alpha/number of photons/density, number of qubits, and the linear space range). "
-        "Please provide your answer in the format: "
-        "\"<think>[THINKING PROCESS]</think> This is a [STATE TYPE] with [KEY parameters] "
-        "equal to [VALUE], number of qubits equal to [N] in the linear space [LOW] to [HIGH].\" "
-        "then extract your opinion on how you determine state, parameters, number of qubit "
-        "from the image."
-    )
+    # Shuffle and split into train/test (90/10)
+    hf_dataset = hf_dataset.shuffle(seed=42)
+    split = hf_dataset.train_test_split(test_size=0.1, seed=42)
+    train_dataset = split["train"]
+    test_dataset  = split["test"]
 
-    # ------------ format baseline ------------------
-    CSV_FILENAME = 'Dataset/wigner_analysis_results_combined.csv' 
-    data = pd.read_csv(CSV_FILENAME)
-    
-    required_columns = ['image', 'ground_truth']
-    for column in required_columns:
-        if column not in data.columns:
-            raise ValueError(f"Column '{column}' not found in the CSV file.")
-    
-    # Shuffle the dataset with a controlled random state
-    data = data.sample(frac=1, random_state=42).reset_index(drop=True)
-    
-    # Filter out data you don't want (e.g., remove type "Number state")
-    # data = data[data['type'] != 'Number state']
-    
-    # Split data into train and test sets
-    train_data, test_data = train_test_split(data, test_size=0.1, random_state=42)
-    
-    # Drop rows with NaN and reset indices
-    train_data = train_data.reset_index(drop=True)
-    test_data  = test_data.reset_index(drop=True)
-    
-    print(len(train_data), len(test_data))
-    
-    BEST_PROMPT = (
-        "You are given a grayscale image representing a quantum optical state. "
-        "Your task is to determine the type of the state (e.g., cat state, Fock state, coherent state, thermal state, random state etc.) "
-        "as well as its key parameters (alpha/number of photons/density, number of qubits, and the linear space range). "
-        "Please provide your answer in the format: "
-        "\"<think>[THINKING PROCESS]</think> This is a [STATE TYPE] with [KEY parameters] equal to [VALUE], number of qubits equal to [N] in the linear space [LOW] to [HIGH].\""
-        "then extract your opinion on how you determine state, parameters, number of qubit from the image, "
-    )
+    print(f"Train: {len(train_dataset)}, Test: {len(test_dataset)}")
 
-    # Prepare your train_data
-    x_train   = train_data['image'][:]
-    images    = train_data['image'][:]
-    y_train   = train_data['ground_truth'][:]
-    prompts   = BEST_PROMPT
-
-    fine_tune_data = []
-    # for i in range(len(x_train)):
-    #     fine_tune_data.append({
-    #         "image": images[i],
-    #         "input": prompts,
-    #         "output": y_train[i],
-    #     })
-
-    # For evaluation: pick just 2 or 3 rows from test_data
-    eval_subset = test_data.iloc[:3].copy()
-    
-    x_eval    = eval_subset['image'][:]
-    img_eval  = eval_subset['image'][:]
-    y_eval    = eval_subset['ground_truth'][:]
-    p_eval    = BEST_PROMPT
-
-    eval_data = []
-    # for i in range(len(x_eval)):
-    #     eval_data.append({
-    #         "image": img_eval[i],
-    #         "input": p_eval,
-    #         "output": y_eval[i],
-    #     })
-
-    # ------------ load extra case-study datasets ---
-    circuit_train, circuit_eval = csv_to_ft_lists(CIR_CSV)
-    # entangle_train, entangle_eval = csv_to_ft_lists(ENT_CSV)
-    circuit_eval   = circuit_eval[:3]
-    # entangle_eval  = entangle_eval[:3]
+    circuit_train = list(train_dataset)
+    circuit_eval  = list(test_dataset.select(range(min(3, len(test_dataset)))))
 
     # ------------ set up and run finetuning --------
     finetuner = FinetuneQwenVL(
-        data=fine_tune_data,
-        eval_data=eval_data,
+        data=[],
+        eval_data=[],
         epochs=6,
         learning_rate=5e-6,
         warmup_ratio=0.1,
@@ -345,6 +271,4 @@ if __name__ == "__main__":
     finetuner.run(
         extra_train1=circuit_train,
         extra_test1=circuit_eval,
-        # extra_train2=entangle_train,
-        # extra_test2=entangle_eval,
     )

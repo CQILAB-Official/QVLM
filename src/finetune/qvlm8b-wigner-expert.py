@@ -11,6 +11,7 @@ from unsloth import is_bf16_supported
 from unsloth.trainer import UnslothVisionDataCollator
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from datasets import load_dataset
 
 output_dir = './model_3vl_wigner_refactor_imporvedprompt'
 model_id = "unsloth/Qwen3-VL-8B-Thinking-unsloth-bnb-4bit"
@@ -73,7 +74,10 @@ class FinetuneQwenVL:
         self.eval_data = eval_data
 
     def format_data(self, row):
-        img = Image.open("Dataset/" + row["image"]).convert("RGB")
+        if isinstance(row["image"], Image.Image):
+            img = row["image"].convert("RGB")
+        else:
+            img = Image.open("Dataset/" + row["image"]).convert("RGB")
         img.info = {}  # Strip metadata to prevent leakage
         img = img.resize((1000, 600))
 
@@ -217,33 +221,26 @@ def csv_to_ft_lists(csv_path, test_frac=0.1, seed=42):
 
 # --------------------------- main script --------------------------------
 if __name__ == "__main__":
-    # CIR_CSV  = "case_study_circuit_patched.csv"
-    # ENT_CSV  = "case_study_entanglement.csv"
+    # ------------ download dataset from HuggingFace ----
+    HF_DATASET = "CQILAB/QVLM-Wigner"
+    print(f"Loading dataset from HuggingFace: {HF_DATASET}")
+    hf_dataset = load_dataset(HF_DATASET, split="train")
+    print(f"Dataset loaded: {len(hf_dataset)} samples")
 
-    # ------------ format baseline ------------------
-    CSV_FILENAME = 'Dataset/wigner_refactor.csv' 
-    data = pd.read_csv(CSV_FILENAME)
-    
+    # Verify required columns
     required_columns = ['image', 'ground_truth']
     for column in required_columns:
-        if column not in data.columns:
-            raise ValueError(f"Column '{column}' not found in the CSV file.")
-    
-    # Shuffle the dataset with a controlled random state
-    data = data.sample(frac=1, random_state=42).reset_index(drop=True)
-    
-    # Filter out data you don't want (e.g., remove type "Number state")
-    # data = data[data['type'] != 'Number state']
-    
-    # Split data into train and test sets
-    train_data, test_data = train_test_split(data, test_size=0.1, random_state=42)
-    
-    # Drop rows with NaN and reset indices
-    train_data = train_data.reset_index(drop=True)
-    test_data  = test_data.reset_index(drop=True)
-    
-    print(len(train_data), len(test_data))
-    
+        if column not in hf_dataset.column_names:
+            raise ValueError(f"Column '{column}' not found in the dataset.")
+
+    # Shuffle and split into train/test (90/10)
+    hf_dataset = hf_dataset.shuffle(seed=42)
+    split = hf_dataset.train_test_split(test_size=0.1, seed=42)
+    train_dataset = split["train"]
+    test_dataset  = split["test"]
+
+    print(f"Train: {len(train_dataset)}, Test: {len(test_dataset)}")
+
     BEST_PROMPT = (
         "You are given a grayscale image representing a quantum optical state. "
         "Your task is to determine the type of the state (e.g., cat state, Fock state, coherent state, thermal state, random state, etc.) "
@@ -264,43 +261,24 @@ if __name__ == "__main__":
         "in the linear space from -[LINVALUE] to [LINVALUE]. "
         "Under a compact binary encoding, this truncated space could be represented using ⌈log2([DIM_VALUE])⌉ = [TOTAL_QUBIT] qubits."
     )
-    # represented using a truncated Hilbert space of dimension d =
 
-    # Prepare your train_data
-    x_train   = train_data['image'][:]
-    images    = train_data['image'][:]
-    y_train   = train_data['ground_truth'][:]
-    prompts   = BEST_PROMPT
-
+    # Prepare training data (image is already a PIL Image from HF dataset)
     fine_tune_data = []
-    for i in range(len(x_train)):
+    for row in train_dataset:
         fine_tune_data.append({
-            "image": images[i],
-            "input": prompts,
-            "output": y_train[i],
+            "image": row["image"],       # PIL Image directly from HF dataset
+            "input": BEST_PROMPT,
+            "output": row["ground_truth"],
         })
 
-    # For evaluation: pick just 2 or 3 rows from test_data
-    eval_subset = test_data.iloc[:3].copy()
-    
-    x_eval    = eval_subset['image'][:]
-    img_eval  = eval_subset['image'][:]
-    y_eval    = eval_subset['ground_truth'][:]
-    p_eval    = BEST_PROMPT
-
+    # For evaluation: pick just 3 rows from test set
     eval_data = []
-    for i in range(len(x_eval)):
+    for row in test_dataset.select(range(min(3, len(test_dataset)))):
         eval_data.append({
-            "image": img_eval[i],
-            "input": p_eval,
-            "output": y_eval[i],
+            "image": row["image"],       # PIL Image directly from HF dataset
+            "input": BEST_PROMPT,
+            "output": row["ground_truth"],
         })
-
-    # ------------ load extra case-study datasets ---
-    # circuit_train, circuit_eval = csv_to_ft_lists(CIR_CSV)
-    # entangle_train, entangle_eval = csv_to_ft_lists(ENT_CSV)
-    # circuit_eval   = circuit_eval[:3]
-    # entangle_eval  = entangle_eval[:3]
 
     # ------------ set up and run finetuning --------
     finetuner = FinetuneQwenVL(
@@ -317,9 +295,4 @@ if __name__ == "__main__":
         peft_dropout=0.0,
     )
 
-    finetuner.run(
-        # extra_train1=circuit_train,
-        # extra_test1=circuit_eval,
-        # extra_train2=entangle_train,
-        # extra_test2=entangle_eval,
-    )
+    finetuner.run()
