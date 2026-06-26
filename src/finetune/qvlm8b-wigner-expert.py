@@ -13,7 +13,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from datasets import load_dataset
 
-output_dir = './model_3vl_wigner_refactor_imporvedprompt'
+output_dir = './model_qvlm8b-wigner-expert'
 model_id = "unsloth/Qwen3-VL-8B-Thinking-unsloth-bnb-4bit"
 
 # tmux new -s impprompt 'python -u restart_training_wigner_v2.py 2>&1 | tee -a  output-log/imprompt-finetune.txt'

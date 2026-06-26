@@ -11,7 +11,7 @@ from unsloth import is_bf16_supported
 from unsloth.trainer import UnslothVisionDataCollator
 from datasets import load_dataset
 
-output_dir = './model_3vl_circuit_refactor_imporvedprompt'
+output_dir = './model_qvlm8b-circuit-expert'
 model_id = "unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit"
 
 # tmux new -s circuit3vl 'python -u restart_circuit_v3.py 2>&1 | tee -a  output-log/circuit3vl-finetune-focused6.txt'

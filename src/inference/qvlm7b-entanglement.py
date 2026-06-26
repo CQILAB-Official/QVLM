@@ -10,30 +10,9 @@ from unsloth import FastVisionModel
 MODEL = None
 TOKENIZER = None
 
-HF_MODEL_ID = "CQILAB/model_qvlm7b-wigner-expert"
-HF_DATASET  = "CQILAB/QVLM-Wigner"
+HF_MODEL_ID = "CQILAB/model_qvlm7b-entanglement-expert"
+HF_DATASET  = "CQILAB/QVLM-Circuit-Entanglement"
 OUTPUT_DIR  = "ResultUpdate"
-
-BEST_PROMPT = (
-    "You are given a grayscale image representing a quantum optical state. "
-    "Your task is to determine the type of the state (e.g., cat state, Fock state, coherent state, thermal state, random state, etc.) "
-    "as well as its key parameters (alpha/number of photons/density, truncated Hilbert space dimension, and the linear space range). "
-    "Please provide your answer in the following format: "
-    "\"<think>[THINKING PROCESS]</think> This is a [STATE TYPE] state with [KEY PARAMETER NAME] ≈ [VALUE], represented using a truncated Hilbert space of dimension d = [DIM_VALUE], "
-    "in the linear space from -[LINVALUE] to [LINVALUE]. "
-    "Under a compact binary encoding, this truncated space could be represented using ⌈log2([DIM_VALUE])⌉ = [TOTAL_QUBIT] qubits.\"\n\n"
-    "Important Instructions:\n"
-    "1. Extract your reasoning on how you determined the state, parameters, and number of qubits from the image.\n"
-    "2. YOU MUST PROVIDE <think></think> BRACKET FOR THE THINKING PROCESS AND ALWAYS START WITH <think> FOR EACH ANSWER.\n"
-    "3. DON'T TAKE THE THINKING OR CONCLUSION FROM THE IMAGE FORMAT OR IMAGE NAME OR IMAGE METADATA.\n"
-    "4. DO NOT write literal strings like '[STATE TYPE]' or '[KEY PARAMETER NAME]'. You MUST replace these placeholders with the actual values you determined (e.g. 'cat', 'α', 'average photon', '19', '5' etc).\n"
-    "5. THE VALUE OF [STATE TYPE], [KEY PARAMETER NAME], [VALUE], [DIM_VALUE], [LINVALUE], [TOTAL_QUBIT] IS THE MOST IMPORTANT VALUE TO BE EVALUATED.\n"
-    "6. THE [TOTAL_QUBIT] IS CALCULATED BY log2([DIM_VALUE]) ROUNDED UP TO THE NEAREST INTEGER.\n"
-    "7. YOU SHOULD ANSWER IN THIS EXACT FORMAT AFTER THE THINKING PROCESS:\n"
-    "This is a [STATE TYPE] state with [KEY PARAMETER NAME] ≈ [VALUE], represented using a truncated Hilbert space of dimension d = [DIM_VALUE], "
-    "in the linear space from -[LINVALUE] to [LINVALUE]. "
-    "Under a compact binary encoding, this truncated space could be represented using ⌈log2([DIM_VALUE])⌉ = [TOTAL_QUBIT] qubits."
-)
 
 # ──────────────────────────────────────────
 # MODEL HELPERS
@@ -68,7 +47,7 @@ def run_inference(image: Image.Image, prompt: str) -> str:
     inputs = tok(image, text, add_special_tokens=False, return_tensors="pt").to("cuda")
     gen_ids = model.generate(
         **{k: v.to("cuda") for k, v in inputs.items()},
-        max_new_tokens=1000,
+        max_new_tokens=1500,
         temperature=0.3,
         min_p=0.1,
         use_cache=True,
@@ -78,7 +57,7 @@ def run_inference(image: Image.Image, prompt: str) -> str:
 # ──────────────────────────────────────────
 # DATA / I/O
 # ──────────────────────────────────────────
-def process_dataset(seed=42, test_frac=0.10):
+def process_dataset(cols: list, seed=42, test_frac=0.20):
     print(f"Loading dataset: {HF_DATASET}")
     dataset = load_dataset(HF_DATASET, split="train")
     dataset = dataset.shuffle(seed=seed)
@@ -87,19 +66,33 @@ def process_dataset(seed=42, test_frac=0.10):
     print(f"Test set: {len(test_ds)} samples")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    out_file = os.path.join(OUTPUT_DIR, "qvlm7b-wigner-expert-inference.csv")
+    out_file = os.path.join(OUTPUT_DIR, "qvlm7b-entanglement-expert-inference.csv")
+
+    header = ["index"]
+    for i in cols:
+        header.extend([f"input_{i}", f"prediction_{i}", f"output_{i}"])
 
     with open(out_file, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["index", "prediction", "ground_truth"])
+        writer.writerow(header)
 
         for idx, row in enumerate(test_ds):
             print(f"Processing row {idx+1}/{len(test_ds)}", flush=True)
             img = row["image"].convert("RGB").resize((1000, 600))
+            row_out = [idx]
 
-            pred = run_inference(img, BEST_PROMPT)
-            writer.writerow([idx, pred, row["ground_truth"]])
-            print(f"  done", flush=True)
+            for n in cols:
+                input_col = f"input_{n}"
+                out_col   = f"output_{n}"
+                if input_col not in row or row[input_col] is None or str(row[input_col]).strip() == "":
+                    row_out.extend(["", "", ""])
+                    continue
+
+                pred = run_inference(img, row[input_col])
+                row_out.extend([row[input_col], pred, row[out_col]])
+                print(f"  done col {n}", flush=True)
+
+            writer.writerow(row_out)
 
     print(f"Wrote {len(test_ds)} rows to {out_file}")
 
@@ -107,4 +100,4 @@ def process_dataset(seed=42, test_frac=0.10):
 # MAIN
 # ──────────────────────────────────────────
 if __name__ == "__main__":
-    process_dataset()
+    process_dataset(cols=[1, 2])

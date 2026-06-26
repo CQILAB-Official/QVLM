@@ -11,7 +11,7 @@ from unsloth import is_bf16_supported
 from unsloth.trainer import UnslothVisionDataCollator
 from datasets import load_dataset
 
-output_dir = './model_25vl_circuit_refactor_imporvedprompt_6focused'
+output_dir = './model_qvlm7b-codegen-expert'
 model_id = "unsloth/Qwen2.5-VL-7B-Instruct-bnb-4bit"
 
 # tmux new -s circuit25vl 'python -u restart_circuit_v2.py 2>&1 | tee -a  output-log/circuit25vl-finetune_6focused.txt'

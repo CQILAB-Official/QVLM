@@ -4,19 +4,19 @@ from PIL import Image
 from datasets import load_dataset
 from unsloth import FastVisionModel
 
-# ──────────────────────────────────────────
+# ────────────────���─────────────────────────
 # GLOBALS
-# ──────────────────────────────────────────
+# ─────────��────────────────────────���───────
 MODEL = None
 TOKENIZER = None
 
-HF_MODEL_ID = "CQILAB/model_qvlm8b-entanglement-expert"
-HF_DATASET  = "CQILAB/QVLM-Circuit-Entanglement"
+HF_MODEL_ID = "CQILAB/model_qvlm8b-circuit-expert"
+HF_DATASET  = "CQILAB/QVLM-Circuit"
 OUTPUT_DIR  = "ResultUpdate"
 
-# ──────────────────────────────────────────
+# ─��────────────────────────���───────────────
 # MODEL HELPERS
-# ──────────────────────────────────────────
+# ───────────��───────────────────────────���──
 def init_model():
     global MODEL, TOKENIZER
     if MODEL is not None:
@@ -54,9 +54,9 @@ def run_inference(image: Image.Image, prompt: str) -> str:
     )[:, inputs["input_ids"].shape[1]:]
     return tok.decode(gen_ids[0], skip_special_tokens=True, clean_up_tokenization_spaces=False)
 
-# ──────────────────────────────────────────
+# ─────────���───────────────���────────────────
 # DATA / I/O
-# ──────────────────────────────────────────
+# ─────────────────────────────────────��────
 def process_dataset(cols: list, seed=42, test_frac=0.20):
     print(f"Loading dataset: {HF_DATASET}")
     dataset = load_dataset(HF_DATASET, split="train")
@@ -66,7 +66,7 @@ def process_dataset(cols: list, seed=42, test_frac=0.20):
     print(f"Test set: {len(test_ds)} samples")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    out_file = os.path.join(OUTPUT_DIR, "qvlm8b-entanglement-expert-inference.csv")
+    out_file = os.path.join(OUTPUT_DIR, "qvlm8b-circuit-expert-inference.csv")
 
     header = ["index"]
     for i in cols:
@@ -96,8 +96,8 @@ def process_dataset(cols: list, seed=42, test_frac=0.20):
 
     print(f"Wrote {len(test_ds)} rows to {out_file}")
 
-# ──────────────────────────────────────────
+# ───────────��──────────────────────────���───
 # MAIN
-# ──────────────────────────────────────────
+# ────────��────────────────────────���────────
 if __name__ == "__main__":
-    process_dataset(cols=[1, 2])
+    process_dataset(cols=[1, 2, 3, 4, 5, 7])

@@ -11,7 +11,7 @@ from unsloth import is_bf16_supported
 from unsloth.trainer import UnslothVisionDataCollator
 from datasets import load_dataset
 
-output_dir = './model_25vl_entanglement_refactor_imporvedprompt'
+output_dir = './model_qvlm7b-entanglement-expert'
 model_id = "unsloth/Qwen2.5-VL-7B-Instruct-bnb-4bit"
 
 # tmux new -s entanglement25vl 'python -u restart_entanglement_v2.py 2>&1 | tee -a  output-log/entanglementv25vl-finetune.txt'

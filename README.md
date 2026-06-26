@@ -1,23 +1,23 @@
-# QVLM - Quantum-domain Vision Language Models for Quantum Optical States and Circuits
+# QVLM — Quantum-domain Vision Language Models
 
-This repository contains the **first Quantum-domain Vision Language Model (QVLM) playground**, designed to be scalable, reproducible, and adaptable for quantum information tasks. The framework is tailored for quantum state classification (Wigner functions), entanglement verification, circuit analysis, and quantum code generation. It leverages state-of-the-art vision-language models fine-tuned as "experts" for diverse quantum-domain applications.
+This repository contains the **first Quantum-domain Vision Language Model (QVLM) playground**, designed to be scalable, reproducible, and adaptable for quantum information tasks. The framework fine-tunes vision-language backbones (Qwen2.5-VL, Qwen3-VL) as specialised experts for quantum state classification (Wigner functions), entanglement verification, circuit analysis, and quantum code generation.
 
 ---
 
-## Features of the QVLM Framework
+## Features
 
 ### 🔧 Adaptable Quantum-Domain VLM
-A prototype that fine-tunes mainly qwen vision-language backbones (e.g., Qwen2.5-VL, Qwen3-VL) as specialized experts for quantum-domain tasks.
+Fine-tunes Qwen vision-language backbones as specialised experts for quantum-domain tasks.
 
 ### 🤖 Expert-Driven Fine-Tuning
-The integration of domain-specific expert training for:
-- **Wigner Function Analysis**: Identifying quantum optical states and parameters from phase-space distributions.
-- **Quantum Circuit Understanding**: Extracting gate sequences and logical structure from circuit diagrams.
-- **Entanglement Verification**: Determining entanglement types and properties from visual representations.
-- **Quantum Code Generation**: Translating visual quantum concepts into executable code (e.g., Qiskit).
+Domain-specific experts for:
+- **Wigner Function Analysis** — identifying quantum optical states and parameters from phase-space distributions.
+- **Quantum Circuit Understanding** — extracting gate sequences and logical structure from circuit diagrams.
+- **Entanglement Verification** — determining entanglement types and properties from visual representations.
+- **Quantum Code Generation** — translating visual quantum concepts into executable Qiskit code.
 
 ### 🔀 Mixture of Experts (MoE) Router
-A central routing system (`moe/`) that acts as the entry-point dispatcher for the QVLM framework. Given an image and a text prompt, the **Router Model** automatically analyzes the inputs and forwards them to the most suitable expert model (Wigner, Circuit, Entanglement, or CodeGen). The MoE system is designed for deployment as a **Hugging Face Inference Endpoint** (`moe/handler.py`) and includes a **Gradio web interface** (`moe/app.py`) for interactive use.
+A central routing system (`moe/`) that dispatches an image + prompt to the most suitable expert. Deployable as a HuggingFace Inference Endpoint (`moe/handler.py`) or as a Gradio web app (`moe/app.py`).
 
 ```
 User Input (Image + Prompt)
@@ -25,161 +25,201 @@ User Input (Image + Prompt)
         ▼
   [Router Model] ─── analyzes task type
         │
-   ┌────┼────┬────────┐
-   ▼    ▼    ▼        ▼
-Wigner  Circuit  Entangle  CodeGen
-Expert  Expert   Expert    Expert
+   ┌────┼────┬──────────┐
+   ▼    ▼    ▼          ▼
+Wigner Circuit Entangle CodeGen
+Expert Expert  Expert   Expert
 ```
 
-### 📊 Comprehensive Baseline Comparison
-Includes extensive inference scripts to evaluate QVLM performance against leading general-purpose models (Baselines):
-- **B1**: Qwen-8B
-- **B2**: Llama-3.2-11B
+### 📊 Baseline Comparisons
+Inference scripts for evaluating QVLM experts against general-purpose models:
+- **B1**: Qwen3-VL-8B
+- **B2**: Llama-3.2-11B-Vision
 - **B3**: ChatGPT-4.1
 
-### 📥 Dataset Download and Overview
+---
 
-#### Main Dataset
-**[Download the QVLM dataset here](https://huggingface.co/datasets/CQILAB/QVLM)** *(Placeholder for CQILAB repository)*
+## Datasets
 
-### 📝 Case Study on Quantum Tasks
-A detailed case study evaluating baseline models across various quantum semantic tasks, assessing performance and robustness under different state configurations to validate the QVLM framework.
+All datasets are hosted on HuggingFace and are **downloaded automatically** when the fine-tuning or inference scripts run — no manual download step required.
 
-<p align="center">
-  <img src="visuals/figures/Fig1.pdf" width="50%" />
-  <img src="visuals/figures/Fig2.pdf" width="45%" />
-</p>
+| Dataset | HuggingFace | Used by |
+|---|---|---|
+| QVLM-Wigner | [CQILAB/QVLM-Wigner](https://huggingface.co/datasets/CQILAB/QVLM-Wigner) | Wigner experts |
+| QVLM-Circuit | [CQILAB/QVLM-Circuit](https://huggingface.co/datasets/CQILAB/QVLM-Circuit) | Circuit & CodeGen experts |
+| QVLM-Circuit-Entanglement | [CQILAB/QVLM-Circuit-Entanglement](https://huggingface.co/datasets/CQILAB/QVLM-Circuit-Entanglement) | Entanglement experts |
+
+### Dataset Columns
+- **image** — raw image (Wigner function, circuit diagram, etc.)
+- **ground_truth** — target text label for the quantum task
+- **input\_N / output\_N** — multi-turn conversation turns (Circuit and Entanglement datasets)
 
 ---
 
-## Table of Supported Experts
+## Models
 
-<table>
-  <tr>
-    <th>Wigner Experts</th>
-    <th>Circuit Experts</th>
-    <th>Entanglement Experts</th>
-    <th>CodeGen Experts</th>
-  </tr>
-  <tr>
-    <td>QVLM-7B Wigner</td>
-    <td>QVLM-7B Circuit</td>
-    <td>QVLM-7B Entanglement</td>
-    <td>QVLM-7B CodeGen</td>
-  </tr>
-  <tr>
-    <td>QVLM-8B Wigner</td>
-    <td>QVLM-8B Circuit</td>
-    <td>QVLM-8B Entanglement</td>
-    <td>QVLM-8B CodeGen</td>
-  </tr>
-  <tr>
-    <td>Qwen2.5-VL (Baseline)</td>
-    <td>Llama-3.2-Vision (Baseline)</td>
-    <td>ChatGPT-4o (Baseline)</td>
-    <td></td>
-  </tr>
-</table>
+All fine-tuned expert models are hosted on HuggingFace as LoRA adapters.
+
+| Expert | 7B Model | 8B Model |
+|---|---|---|
+| Wigner | [CQILAB/model_qvlm7b-wigner-expert](https://huggingface.co/CQILAB/model_qvlm7b-wigner-expert) | [CQILAB/model_qvlm8b-wigner-expert](https://huggingface.co/CQILAB/model_qvlm8b-wigner-expert) |
+| Circuit | [CQILAB/model_qvlm7b-circuit-expert](https://huggingface.co/CQILAB/model_qvlm7b-circuit-expert) | [CQILAB/model_qvlm8b-circuit-expert](https://huggingface.co/CQILAB/model_qvlm8b-circuit-expert) |
+| Entanglement | [CQILAB/model_qvlm7b-entanglement-expert](https://huggingface.co/CQILAB/model_qvlm7b-entanglement-expert) | [CQILAB/model_qvlm8b-entanglement-expert](https://huggingface.co/CQILAB/model_qvlm8b-entanglement-expert) |
+| CodeGen | [CQILAB/model_qvlm7b-codegen-expert](https://huggingface.co/CQILAB/model_qvlm7b-codegen-expert) | [CQILAB/model_qvlm8b-codegen-expert](https://huggingface.co/CQILAB/model_qvlm8b-codegen-expert) |
+
+Base backbones:
+- **7B experts** — `unsloth/Qwen2.5-VL-7B-Instruct-bnb-4bit`
+- **8B experts** — `unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit`
 
 ---
 
-## Setup Instructions
+## Setup
 
-### 1. Environment Setup
-- Install [Anaconda](https://www.anaconda.com/products/distribution).
-- Create an environment using:
-  ```bash
-  conda env create -f environment.yml
-  conda activate qvlm
-  ```
+### 1. Environment
+```bash
+conda env create -f environment.yml
+conda activate qvlm
+```
 
-### 2. Dataset Setup
-- Download the dataset from [HuggingFace🤗](https://huggingface.co/datasets/CQILAB/QVLM-6G):
-  ```bash
-  cd QuantumVLM
-  git clone https://huggingface.co/datasets/CQILAB/QVLM_dataset/
-  ```
+### 2. HuggingFace Login
+Required to download models and datasets from the CQILAB organisation:
+```bash
+huggingface-cli login
+```
 
-### 3. Training/Fine-tuning Scripts
-- To fine-tune an expert model (example: QVLM-7B Wigner):
-  ```bash
-  python src/finetune/qvlm7b-wigner-expert.py
-  ```
-- To fine-tune a Circuit expert on QVLM-8B:
-  ```bash
-  python src/finetune/qvlm8b-circuit-expert.py
-  ```
+---
 
-### 4. Inference and Experiments
-- Run inference for a specific baseline (example: Baseline 1 - Qwen8B):
-  ```bash
-  python src/inference/b1-qwen8b-wigner.py
-  ```
-- Run inference for a QVLM expert model:
-  ```bash
-  python src/inference/qvlm7b-wigner-expert.py
-  ```
+## Fine-Tuning
+
+Datasets are downloaded from HuggingFace automatically on first run. Results are saved under `model/`.
+
+### Wigner Expert
+```bash
+python src/finetune/qvlm7b-wigner-expert.py   # Qwen2.5-VL 7B
+python src/finetune/qvlm8b-wigner-expert.py   # Qwen3-VL 8B
+```
+Dataset: `CQILAB/QVLM-Wigner`
+
+### Circuit Expert
+```bash
+python src/finetune/qvlm7b-circuit-expert.py  # Qwen2.5-VL 7B
+python src/finetune/qvlm8b-circuit-expert.py  # Qwen3-VL 8B
+```
+Dataset: `CQILAB/QVLM-Circuit`
+
+### Entanglement Expert
+```bash
+python src/finetune/qvlm7b-entanglement-expert.py  # Qwen2.5-VL 7B
+python src/finetune/qvlm8b-entanglement-expert.py  # Qwen3-VL 8B
+```
+Dataset: `CQILAB/QVLM-Circuit-Entanglement`
+
+### CodeGen Expert
+```bash
+python src/finetune/qvlm7b-codegen-expert.py  # Qwen2.5-VL 7B
+python src/finetune/qvlm8b-codegen-expert.py  # Qwen3-VL 8B
+```
+Dataset: `CQILAB/QVLM-Circuit` (turn 6 — code generation step)
+
+### Uploading Fine-Tuned Models to HuggingFace
+After training, upload all expert checkpoints to HuggingFace:
+```bash
+python upload_models_to_hf.py
+```
+This pushes the latest checkpoint of each model under `CQILAB/model_qvlm*-*-expert`.
+
+---
+
+## Inference
+
+All expert inference scripts load the model and dataset directly from HuggingFace. Results are written to `ResultUpdate/`.
+
+### QVLM Expert Models
+
+| Task | 7B Script | 8B Script |
+|---|---|---|
+| Wigner | `src/inference/qvlm7b-wigner-expert.py` | `src/inference/qvlm8b-wigner-expert.py` |
+| Circuit | `src/inference/qvlm7b-circuit-expert.py` | `src/inference/qvlm8b-circuit-expert.py` |
+| Entanglement | `src/inference/qvlm7b-entanglement.py` | `src/inference/qvlm8b-entanglement.py` |
+| CodeGen | `src/inference/qvlm7b-codegen.py` | `src/inference/qvlm8b-codegen.py` |
+
+```bash
+# Examples
+python src/inference/qvlm7b-wigner-expert.py
+python src/inference/qvlm7b-circuit-expert.py
+python src/inference/qvlm7b-entanglement.py
+python src/inference/qvlm7b-codegen.py
+```
+
+### Baseline Models
+
+| Baseline | Wigner script | Circuit / Entanglement / CodeGen script |
+|---|---|---|
+| B1 — Qwen3-VL-8B | `src/inference/b1-qwen8b-wigner.py` | `src/inference/b1-qwen8b-circuit-ent-codegen.py` |
+| B2 — Llama-3.2-11B | `src/inference/b2-llama-3.2-wigner.py` | `src/inference/b2-llama-3.2-circuit-ent-codegen.py` |
+| B3 — ChatGPT-4.1 | `src/inference/b3-chatgpt4.1-wigner.py` | `src/inference/b3-chatgpt4.1-circuit-ent-codegen.py` |
+
+```bash
+# Examples
+python src/inference/b1-qwen8b-wigner.py
+python src/inference/b2-llama-3.2-circuit-ent-codegen.py
+```
+
+### MoE Router (Gradio Demo)
+```bash
+python moe/app.py
+```
+Or deploy as a HuggingFace Inference Endpoint using `moe/handler.py`.
+
+---
+
+## Repository Structure
+
+```
+QVLM/
+├── src/
+│   ├── finetune/          # Fine-tuning scripts (8 experts × 2 backbones)
+│   └── inference/         # Inference scripts (experts + 3 baselines)
+├── moe/                   # MoE router (handler.py + app.py)
+├── model/                 # Local model checkpoints (after training)
+├── ResultUpdate/          # Inference output CSVs
+├── logs/                  # Training logs
+├── upload_models_to_hf.py # Script to push trained models to HuggingFace
+└── environment.yml        # Conda environment
+```
 
 ---
 
 ## Reproducibility
 
-### 🗃️ Dataset 
-Labeled dataset with ground-truth data and quantum images.
-#### Dataset Columns
-- **image**: Raw image data (Wigner functions, Circuits, etc.) used for training and evaluation.
-- **ground_truth**: The target text/labels for the quantum task.
-
-### 🏗️ Testbed
-The framework supports rapid prototyping and evaluation of new quantum-domain experts by swapping backbones and expert-specific datasets.
-
-### 💻 Modular Structure
-- `dataset/`: Central storage for all quantum datasets.
-- `src/finetune/`: Scripts for fine-tuning expert models.
-- `src/inference/`: Scripts for baseline comparisons and expert inference.
-- `moe/`: **Main MoE router** — `handler.py` (HuggingFace endpoint) and `app.py` (Gradio UI) for dispatching tasks to the correct QVLM expert.
-- `model/`: Directory for storing model weights and checkpoints.
-- `results/`: Directory for inference outputs and evaluation CSVs.
-- `logs/`: Directory for training and execution logs.
-
-### 🔀 Running the MoE Router
-- Launch the Gradio demo locally:
-  ```bash
-  python moe/app.py
-  ```
-- Deploy as a Hugging Face Inference Endpoint using `moe/handler.py` as the custom handler.
-  
 ### 📊 Performance Metrics
-- Metrics include:
-  - **Accuracy**
-  - **F1 Score**
-  - **BERT Score**
-  - **BLEU Score**
-  - **Word Error Rate (WER)**
-  - **Custom Quantum Metrics** (e.g., parameter estimation error)
+- Accuracy, F1 Score, BERT Score, BLEU Score, Word Error Rate (WER)
+- Custom quantum metrics (e.g., parameter estimation error, state classification accuracy)
+
+### 🔁 Consistent Splits
+All scripts use `seed=42` for dataset shuffling and train/test splitting, ensuring reproducible evaluation across runs.
 
 ---
 
 ## Citation
 If you use this framework in your research, please cite:
-
 ```bibtex
 ```
 
 ---
 
-## Others
-
-- Official Repository: [CQILAB/QVLM](https://github.com/CQILAB-Official/QVLM)
-- Dataset: [HuggingFace](https://huggingface.co/datasets/CQILAB/QVLM)
+## Links
+- Repository: [CQILAB/QVLM](https://github.com/CQILAB-Official/QVLM)
+- Organisation: [CQILAB on HuggingFace](https://huggingface.co/CQILAB)
 
 ## License
-```
 MIT License
-```
 
-## Contributor
-- CQILAB Contributors
+## Contributors
+CQILAB Contributors
 
-## Changelogs
+## Changelog
+- Migrated all datasets and models to HuggingFace (`CQILAB/` organisation).
+- Added 8 fine-tuned expert models (7B and 8B variants for Wigner, Circuit, Entanglement, CodeGen).
+- All fine-tuning and inference scripts now load datasets and models directly from HuggingFace.
 - Initial release of QVLM framework and expert scripts.

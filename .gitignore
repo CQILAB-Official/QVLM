@@ -62,3 +62,4 @@ version_notes/*.txt
 dataset/
 dataset/**
 dataset/*.csv
+upload_models_to_hf.py
