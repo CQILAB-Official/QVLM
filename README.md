@@ -16,20 +16,29 @@ Domain-specific experts for:
 - **Entanglement Verification** — determining entanglement types and properties from visual representations.
 - **Quantum Code Generation** — translating visual quantum concepts into executable Qiskit code.
 
-### 🔀 Mixture of Experts (MoE) Router
-A central routing system (`moe/`) that dispatches an image + prompt to the most suitable expert. Deployable as a HuggingFace Inference Endpoint (`moe/handler.py`) or as a Gradio web app (`moe/app.py`).
+### 🔀 Mixture of Experts (MoE) Router — the main QVLM entry point
+A central routing system (`moe/`) that dispatches an image + text prompt to the most suitable fine-tuned expert. **Running the MoE is the primary way to run QVLM** — it gives you access to all four experts through a single interface, with automatic task routing.
+
+Deployable as a Gradio web app (`moe/app.py`) or a HuggingFace Inference Endpoint (`moe/handler.py`).
 
 ```
-User Input (Image + Prompt)
+User Input (Image + Prompt)   ← choose 7B or 8B experts
         │
         ▼
-  [Router Model] ─── analyzes task type
+  [Keyword Router] ─── detects task type from prompt
         │
    ┌────┼────┬──────────┐
    ▼    ▼    ▼          ▼
 Wigner Circuit Entangle CodeGen
 Expert Expert  Expert   Expert
+        │
+        ▼
+  Expert Response
 ```
+
+**Two modes:**
+- **Route to Best Expert** — the router picks the single best expert and returns its response.
+- **Run All Experts** — all four experts run on the same image + prompt; responses are shown side by side for comparison.
 
 ### 📊 Baseline Comparisons
 Inference scripts for evaluating QVLM experts against general-purpose models:
@@ -85,6 +94,102 @@ conda activate qvlm
 Required to download models and datasets from the CQILAB organisation:
 ```bash
 huggingface-cli login
+```
+
+---
+
+## Running QVLM
+
+The recommended way to use QVLM interactively is through the **MoE Gradio app**, which gives you access to all four fine-tuned experts through a single web interface.
+
+### Quick Start
+
+```bash
+# 1. Activate the environment
+conda activate qvlm
+
+# 2. Log in to HuggingFace (models are downloaded automatically on first use)
+huggingface-cli login
+
+# 3. Launch QVLM
+python moe/app.py
+```
+
+Open your browser at **http://localhost:7860**.
+
+---
+
+### Choosing the Model Size
+
+Both the Gradio app and the API endpoint support two expert sizes. Select the size that matches your VRAM budget:
+
+| Size | Backbone | VRAM per expert (4-bit) | Best for |
+|---|---|---|---|
+| **7B** (default) | Qwen2.5-VL-7B | ~4 GB | Faster inference, lower VRAM |
+| **8B** | Qwen3-VL-8B | ~5 GB | Higher accuracy, stronger reasoning |
+
+In the Gradio app, use the **"Expert Model Size"** radio button (7b / 8b) before submitting.
+
+> **VRAM guide:**
+> - "Route to Best Expert" mode loads **one expert** at a time (lazy loading) — minimum ~4 GB.
+> - "Run All Experts" mode runs all four experts sequentially on the same GPU — peak usage ~4–5 GB (models are loaded one at a time and cached).
+
+---
+
+### Gradio App — Two Modes
+
+#### Tab 1 — Route to Best Expert
+The router analyses your prompt with keyword matching and automatically selects the most suitable expert:
+
+| Routing keywords (examples) | Expert selected |
+|---|---|
+| wigner, fock, coherent, cat state, phase space, thermal, photon | **WIGNER** |
+| circuit, gate, hadamard, cnot, rx/ry/rz, unitary | **CIRCUIT** |
+| entanglement, bell state, epr, separable, concurrence | **ENTANGLEMENT** |
+| code, qiskit, implement, generate, python, write | **CODEGEN** |
+
+The routing decision and the expert's full response are shown.
+
+#### Tab 2 — Run All Experts
+All four experts run on the same image and prompt. The router's recommendation is shown alongside all four independent responses — useful for comparison or when the task type is ambiguous.
+
+---
+
+### API Usage via `handler.py`
+
+`moe/handler.py` implements the HuggingFace Inference Endpoint interface and can also be called programmatically:
+
+```python
+import base64
+from moe.handler import EndpointHandler
+
+handler = EndpointHandler()
+
+with open("my_image.png", "rb") as f:
+    image_b64 = base64.b64encode(f.read()).decode()
+
+# Route to the best expert (7B)
+response = handler({
+    "inputs": {
+        "image":      image_b64,
+        "prompt":     "What quantum state is shown in this Wigner function?",
+        "model_size": "7b",        # "7b" (default) or "8b"
+    }
+})
+print(response["route_selected"])  # e.g. "WIGNER"
+print(response["result"])          # expert response text
+
+# Run all four experts (8B) and compare
+response_all = handler({
+    "inputs": {
+        "image":            image_b64,
+        "prompt":           "Describe the quantum circuit shown.",
+        "model_size":       "8b",
+        "run_all_experts":  True,
+    }
+})
+for expert, text in response_all["all_expert_results"].items():
+    print(f"\n=== {expert} ===\n{text}")
 ```
 
 ---
@@ -165,11 +270,26 @@ python src/inference/b1-qwen8b-wigner.py
 python src/inference/b2-llama-3.2-circuit-ent-codegen.py
 ```
 
-### MoE Router (Gradio Demo)
+### MoE Router — Running QVLM (Gradio App)
+
+The MoE Gradio app is the **primary interface for running QVLM**. It integrates all four expert models and handles routing automatically.
+
 ```bash
+# Launch with default settings (experts load lazily on first use)
 python moe/app.py
 ```
-Or deploy as a HuggingFace Inference Endpoint using `moe/handler.py`.
+
+Open **http://localhost:7860**. Use the **"Expert Model Size"** radio button to switch between 7B (Qwen2.5-VL) and 8B (Qwen3-VL) experts at runtime.
+
+See the [Running QVLM](#running-qvlm) section above for full details on modes, VRAM requirements, and the routing table.
+
+#### Deploy as a HuggingFace Inference Endpoint
+
+```bash
+# moe/handler.py is the endpoint entry point
+# Deploy to HuggingFace Spaces / Inference Endpoints using this file.
+# Supports model_size ("7b"/"8b") and run_all_experts (true/false) in the request body.
+```
 
 ---
 
@@ -219,6 +339,7 @@ MIT License
 CQILAB Contributors
 
 ## Changelog
+- **MoE router rewritten** — `moe/handler.py` and `moe/app.py` now load and run the real fine-tuned expert models (Wigner, Circuit, Entanglement, CodeGen) using the same `FastVisionModel` inference pipeline as `src/inference/`. Supports 7B and 8B model sizes, keyword-based quantum routing, and a "Run All Experts" mode.
 - Migrated all datasets and models to HuggingFace (`CQILAB/` organisation).
 - Added 8 fine-tuned expert models (7B and 8B variants for Wigner, Circuit, Entanglement, CodeGen).
 - All fine-tuning and inference scripts now load datasets and models directly from HuggingFace.
