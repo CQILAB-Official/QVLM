@@ -293,13 +293,79 @@ See the [Running QVLM](#running-qvlm) section above for full details on modes, V
 
 ---
 
+## Evaluation (`src/eval/`)
+
+`src/eval/` holds the notebooks/scripts used to compute the paper's evaluation metrics on top of the CSVs produced by `src/inference/`. It's organised as `src/eval/MetricsGroup/<task>/<metric>/`, one subtree per task:
+
+```
+src/eval/
+├── ResultGroup/                                  # ⚠ not committed — populate manually, see below
+│   ├── 1.Wigner/
+│   ├── 2.Entanglement/
+│   │   └── v2/
+│   ├── 3.Circuit/
+│   │   ├── v3/
+│   │   └── v4/
+│   └── 4.Dataset/
+└── MetricsGroup/
+    ├── 1.Wigner/
+    │   ├── 1.BERT-BLEU-CER-MER-WER/   # BERTScore, BLEU, CER, MER, WER
+    │   ├── 2.Word2Vec/                # custom Word2Vec cosine similarity
+    │   ├── 3.Glove/                   # GloVe cosine similarity
+    │   └── 4.Accuracy/                # 1.Converter → 2.Output → 3.Calculator pipeline
+    ├── 2.Entanglement/
+    │   └── 1.Accuracy-RMSE/
+    └── 3.Circuit/
+        ├── 1.QuantumCircuitAnalysis/
+        ├── 2.VQA-Runtime/
+        ├── 3.QuantumCircuitClassification-Accuracy-Precision-Recall/
+        └── 4.QuantumCircuitAnalysis-SimilarityScores/
+            ├── 1.BERT-BLEU/
+            ├── 2.Word2Vec/
+            └── 3.Glove/
+```
+
+Each notebook loads its input CSV with a hardcoded relative path, e.g. `base_path = "../../../"` + `goto_folder = "ResultGroup/1.Wigner/"` + a hardcoded filename — so it must be run with its own directory as the Jupyter working directory, and the referenced files must already exist on disk.
+
+### What you need to populate before running
+
+**1. `src/eval/ResultGroup/`** — the raw per-task inference-result CSVs (renamed/curated copies of the outputs in `ResultUpdate/` / `ResultGroupUpdate/` at the repo root). This directory is gitignored (see `src/eval/.gitignore`: `ResultGroup`, `*.csv`, …) and is **not** shipped in the repo, so it has to be recreated locally with this structure:
+
+```
+src/eval/ResultGroup/
+├── 1.Wigner/            # Wigner-Baseline1-Qwen3VL.csv, Wigner-Baseline2-Llama.csv,
+│                         # Wigner-Baseline3-ChatGPT-4.1.csv, Wigner-QuantumVLM-*.csv, ...
+├── 2.Entanglement/       # Entanglement-Baseline*.csv, Entanglement-QuantumVLM-*.csv
+│   └── v2/               # newer/versioned Entanglement result CSVs
+├── 3.Circuit/            # Circuit-Baseline*.csv, Circuit-QuantumVLM-*.csv
+│   ├── v3/                # "-focused-compile" / v3 Circuit result CSVs
+│   └── v4/                # v4 Circuit result CSVs
+└── 4.Dataset/            # source dataset CSV(s), e.g. wigner_refactor.csv
+```
+
+Exact filenames must match what each notebook hardcodes (check the `filename = "..."` cell before running) — mismatched names (e.g. a missing `v1.`/`v2.` version prefix) will raise `FileNotFoundError`.
+
+**2. GloVe embeddings** — `MetricsGroup/1.Wigner/3.Glove/` and `MetricsGroup/3.Circuit/4.QuantumCircuitAnalysis-SimilarityScores/3.Glove/` need `glove.6B.300d.txt` (converted on first run to `glove.6B.300d.w2v`) in the same directory as the notebook/script. Download the GloVe 6B pack from the [Stanford NLP GloVe project](https://nlp.stanford.edu/projects/glove/) and unzip `glove.6B.300d.txt` next to those scripts (or symlink it in).
+
+**3. Word2Vec assets** — `MetricsGroup/1.Wigner/2.Word2Vec/1-2-0.model-generator.ipynb` trains a custom `Word2Vec` model from a ground-truth corpus CSV (`wigner_analysis_results_combined.csv`) and saves `custom_w2v_groundtruth.model`; downstream Word2Vec notebooks load that model. Both need to sit next to the notebook — regenerate them by running `1-2-0.model-generator.ipynb` first, or copy the corpus/model in from wherever they were last produced.
+
+**4. Extra Python packages** — `torchmetrics` (BERTScore/BLEU/CER/MER/WER) and `seaborn` (confusion matrix / distribution plots) are required and have been added to `environment.yml`; re-run `conda env update -f environment.yml` (or `pip install torchmetrics seaborn`) if your existing env predates this change.
+
+### Running order
+
+- **BERT/BLEU/CER/MER/WER, Word2Vec, GloVe** — independent per task/model; run once `ResultGroup/` (and GloVe/Word2Vec assets, for those metrics) are in place.
+- **Accuracy (Wigner)** — 3-stage pipeline: `1.Converter/` (raw CSV → converted CSV in `2.Output/`) → `2.Output/` (intermediate, some already committed) → `3.Calculator/` (reads from `2.Output/`, computes the final metric). Run Converter notebooks before their matching Calculator notebook if the `2.Output/` CSV they need isn't already there.
+
+---
+
 ## Repository Structure
 
 ```
 QVLM/
 ├── src/
 │   ├── finetune/          # Fine-tuning scripts (8 experts × 2 backbones)
-│   └── inference/         # Inference scripts (experts + 3 baselines)
+│   ├── inference/         # Inference scripts (experts + 3 baselines)
+│   └── eval/               # Evaluation notebooks/scripts (see Evaluation section above)
 ├── moe/                   # MoE router (handler.py + app.py)
 ├── model/                 # Local model checkpoints (after training)
 ├── ResultUpdate/          # Inference output CSVs
@@ -339,6 +405,7 @@ MIT License
 CQILAB Contributors
 
 ## Changelog
+- **Documented `src/eval/`** — added an Evaluation section covering the `MetricsGroup/` layout, the `ResultGroup/` directory structure that must be populated locally (gitignored, not shipped in the repo), GloVe/Word2Vec asset requirements, and the Accuracy Converter → Output → Calculator run order. Added `torchmetrics` and `seaborn` to `environment.yml`.
 - **MoE router rewritten** — `moe/handler.py` and `moe/app.py` now load and run the real fine-tuned expert models (Wigner, Circuit, Entanglement, CodeGen) using the same `FastVisionModel` inference pipeline as `src/inference/`. Supports 7B and 8B model sizes, keyword-based quantum routing, and a "Run All Experts" mode.
 - Migrated all datasets and models to HuggingFace (`CQILAB/` organisation).
 - Added 8 fine-tuned expert models (7B and 8B variants for Wigner, Circuit, Entanglement, CodeGen).
