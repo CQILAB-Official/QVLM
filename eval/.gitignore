@@ -1,0 +1,12 @@
+*.zip
+.history
+logs
+metrics
+Result
+ResultGroup
+*.model
+*.w2v
+glove.6B.*
+*.csv
+*.pdf
+*.png
